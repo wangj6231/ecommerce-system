@@ -61,9 +61,32 @@ export default function ProductsAdmin() {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            <div className="sm:flex sm:items-center justify-between">
+            <div className="border-b border-gray-200 pb-5 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <h3 className="text-base font-semibold leading-6 text-gray-900">後台管理系統</h3>
+                    <div className="mt-2">
+                        <nav className="-mb-px flex space-x-8">
+                            <Link
+                                href="/admin"
+                                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 whitespace-nowrap border-b-2 px-1 pb-4 text-sm font-medium"
+                            >
+                                會員列表
+                            </Link>
+                            <Link
+                                href="/admin/products"
+                                className="border-indigo-500 text-indigo-600 whitespace-nowrap border-b-2 px-1 pb-4 text-sm font-medium"
+                                aria-current="page"
+                            >
+                                商品管理
+                            </Link>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-8 sm:flex sm:items-center justify-between">
                 <div className="sm:flex-auto">
-                    <h1 className="text-2xl font-semibold leading-6 text-gray-900">商品管理</h1>
+                    <h1 className="text-2xl font-semibold leading-6 text-gray-900">商品列表</h1>
                     <p className="mt-2 text-sm text-gray-700">
                         管理所有商品列表。
                     </p>
