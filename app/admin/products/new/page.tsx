@@ -40,7 +40,8 @@ export default function NewProduct() {
             if (res.ok) {
                 router.push('/admin/products')
             } else {
-                alert('新增失敗')
+                const data = await res.json()
+                alert(data.message || '新增失敗')
             }
         } catch (error) {
             console.error(error)

@@ -17,6 +17,7 @@ export async function GET(request: Request) {
         })
         return NextResponse.json(notifications)
     } catch (error) {
+        console.error('Error fetching notifications:', error)
         return NextResponse.json({ error: 'Error fetching notifications' }, { status: 500 })
     }
 }

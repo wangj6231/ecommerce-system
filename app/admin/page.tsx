@@ -3,16 +3,17 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-
 import Link from 'next/link'
-
-import NotificationsList from '@/components/NotificationsList'
+import * as XLSX from 'xlsx'
 
 interface User {
     id: number
-    email: string
-    name: string
+    username: string
+    email?: string
+    name?: string
     role: string
+    phone?: string
+    address?: string
     createdAt: string
 }
 
@@ -21,6 +22,7 @@ export default function AdminDashboard() {
     const router = useRouter()
     const [users, setUsers] = useState<User[]>([])
     const [loading, setLoading] = useState(true)
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -34,9 +36,10 @@ export default function AdminDashboard() {
         }
     }, [status, session, router])
 
-    const fetchUsers = async () => {
+    const fetchUsers = async (query = '') => {
         try {
-            const res = await fetch('/api/admin/users')
+            const url = query ? `/api/admin/users?query=${encodeURIComponent(query)}` : '/api/admin/users'
+            const res = await fetch(url)
             if (res.ok) {
                 const data = await res.json()
                 setUsers(data)
@@ -46,6 +49,11 @@ export default function AdminDashboard() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault()
+        fetchUsers(searchQuery)
     }
 
     const handleDelete = async (id: number) => {
@@ -63,20 +71,36 @@ export default function AdminDashboard() {
         const reader = new FileReader()
         reader.onload = async (event) => {
             try {
-                const json = JSON.parse(event.target?.result as string)
-                const res = await fetch('/api/admin/import', {
+                const bstr = event.target?.result
+                const wb = XLSX.read(bstr, { type: 'binary' })
+                const wsname = wb.SheetNames[0]
+                const ws = wb.Sheets[wsname]
+                const data = XLSX.utils.sheet_to_json(ws)
+
+                // Map fields
+                // Assuming Excel headers are Chinese or match somewhat
+                const mappedData = data.map((row: any) => ({
+                    username: row['會員帳號'] || row['username'],
+                    name: row['會員姓名'] || row['name'],
+                    password: row['帳號密碼'] || row['password'],
+                    phone: row['會員連絡電話'] || row['phone'],
+                    address: row['會員地址'] || row['address']
+                }))
+
+                const res = await fetch('/api/admin/users/import', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(json),
+                    body: JSON.stringify(mappedData),
                 })
-                const data = await res.json()
-                alert(data.message)
+                const resData = await res.json()
+                alert(resData.message)
                 fetchUsers()
             } catch (error) {
-                alert('無效的 JSON 檔案')
+                console.error(error)
+                alert('匯入失敗')
             }
         }
-        reader.readAsText(file)
+        reader.readAsBinaryString(file)
     }
 
     if (status === 'loading' || loading) return <div className="p-8">載入中...</div>
@@ -87,41 +111,34 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
             <div className="sm:flex sm:items-center justify-between">
                 <div className="sm:flex-auto">
-                    <h1 className="text-2xl font-semibold leading-6 text-gray-900">後台管理</h1>
+                    <h1 className="text-2xl font-semibold leading-6 text-gray-900">後台管理 - 會員列表</h1>
                     <p className="mt-2 text-sm text-gray-700">
-                        管理會員與商品。
+                        管理系統會員資料。
                     </p>
-                </div>
-                <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex gap-2">
-                    <Link
-                        href="/admin/products"
-                        className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-                    >
-                        管理商品
-                    </Link>
                 </div>
             </div>
 
             <div className="mt-8">
-                <h2 className="text-xl font-bold mb-4">系統通知</h2>
-                <div className="bg-white shadow overflow-hidden sm:rounded-md mb-8">
-                    <ul role="list" className="divide-y divide-gray-200">
-                        <NotificationsList />
-                    </ul>
-                </div>
+                <div className="flex flex-col sm:flex-row gap-4 mb-4 justify-between items-center">
+                    <form onSubmit={handleSearch} className="flex gap-2">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="搜尋關鍵字 (帳號/姓名)"
+                            className="rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                        />
+                        <button type="submit" className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">
+                            搜尋
+                        </button>
+                    </form>
 
-                <h2 className="text-xl font-bold mb-4">會員列表</h2>
-                <div className="flex gap-2 mb-4">
-                    <a
-                        href="/api/admin/export"
-                        className="block rounded-md bg-white px-3 py-2 text-center text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                    >
-                        匯出 CSV
-                    </a>
-                    <label className="block rounded-md bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 cursor-pointer">
-                        匯入 JSON
-                        <input type="file" accept=".json" onChange={handleImport} className="hidden" />
-                    </label>
+                    <div className="flex gap-2">
+                        <label className="block rounded-md bg-green-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-green-500 cursor-pointer">
+                            匯入 Excel
+                            <input type="file" accept=".xlsx, .xls" onChange={handleImport} className="hidden" />
+                        </label>
+                    </div>
                 </div>
 
                 <div className="flow-root">
@@ -131,10 +148,11 @@ export default function AdminDashboard() {
                                 <table className="min-w-full divide-y divide-gray-300">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">姓名</th>
-                                            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">電子郵件</th>
+                                            <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">會員帳號</th>
+                                            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">姓名</th>
+                                            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">電話</th>
+                                            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">地址</th>
                                             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">角色</th>
-                                            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">註冊時間</th>
                                             <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                                                 <span className="sr-only">操作</span>
                                             </th>
@@ -143,11 +161,13 @@ export default function AdminDashboard() {
                                     <tbody className="divide-y divide-gray-200 bg-white">
                                         {users.map((user) => (
                                             <tr key={user.id}>
-                                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{user.name}</td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.email}</td>
+                                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{user.username}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.name}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.phone}</td>
+                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.address}</td>
                                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{user.role}</td>
-                                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
                                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                                    <Link href={`/admin/users/${user.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">編輯</Link>
                                                     <button onClick={() => handleDelete(user.id)} className="text-red-600 hover:text-red-900">刪除</button>
                                                 </td>
                                             </tr>

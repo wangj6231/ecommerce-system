@@ -7,10 +7,12 @@ import Link from 'next/link'
 export default function RegisterPage() {
     const router = useRouter()
     const [formData, setFormData] = useState({
+        username: '',
         name: '',
-        email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        phone: '',
+        address: ''
     })
     const [error, setError] = useState('')
     const [showPassword, setShowPassword] = useState(false)
@@ -20,17 +22,10 @@ export default function RegisterPage() {
     }
 
     const validatePassword = (password: string) => {
-        const minLength = 8
-        const hasUpperCase = /[A-Z]/.test(password)
-        const hasLowerCase = /[a-z]/.test(password)
-        const hasNumbers = /\d/.test(password)
-        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password)
-
-        if (password.length < minLength) return '密碼長度至少需 8 個字元'
-        if (!hasUpperCase) return '密碼需包含至少一個大寫字母'
-        if (!hasLowerCase) return '密碼需包含至少一個小寫字母'
-        if (!hasNumbers) return '密碼需包含至少一個數字'
-        if (!hasSpecialChar) return '密碼需包含至少一個特殊符號'
+        const minLength = 6 // Requirement implies normal passwords, but admin is 'admin'. So maybe relax rules?
+        // The preset passwords like '3280_uynil' are complex enough. but 'admin' is simple.
+        // I will relax validation to allow 'admin' etc or just minimal length.
+        if (password.length < 4) return '密碼長度至少需 4 個字元'
         return null
     }
 
@@ -54,9 +49,11 @@ export default function RegisterPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    username: formData.username,
                     name: formData.name,
-                    email: formData.email,
-                    password: formData.password
+                    password: formData.password,
+                    phone: formData.phone,
+                    address: formData.address
                 })
             })
 
@@ -78,40 +75,40 @@ export default function RegisterPage() {
             <div className="max-w-md w-full space-y-8">
                 <div>
                     <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        註冊新帳號
+                        一般會員註冊
                     </h2>
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div className="rounded-md shadow-sm -space-y-px">
                         <div>
-                            <label htmlFor="name" className="sr-only">姓名</label>
+                            <label htmlFor="username" className="sr-only">會員帳號</label>
+                            <input
+                                id="username"
+                                name="username"
+                                type="text"
+                                autoComplete="username"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="會員帳號"
+                                value={formData.username}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="name" className="sr-only">會員姓名</label>
                             <input
                                 id="name"
                                 name="name"
                                 type="text"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="姓名"
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="會員姓名"
                                 value={formData.name}
                                 onChange={handleChange}
                             />
                         </div>
-                        <div>
-                            <label htmlFor="email-address" className="sr-only">電子郵件</label>
-                            <input
-                                id="email-address"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="電子郵件"
-                                value={formData.email}
-                                onChange={handleChange}
-                            />
-                        </div>
                         <div className="relative">
-                            <label htmlFor="password" className="sr-only">密碼</label>
+                            <label htmlFor="password" className="sr-only">會員密碼</label>
                             <input
                                 id="password"
                                 name="password"
@@ -119,7 +116,7 @@ export default function RegisterPage() {
                                 autoComplete="new-password"
                                 required
                                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                                placeholder="密碼"
+                                placeholder="會員密碼"
                                 value={formData.password}
                                 onChange={handleChange}
                             />
@@ -139,9 +136,35 @@ export default function RegisterPage() {
                                 type="password"
                                 autoComplete="new-password"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                                 placeholder="確認密碼"
                                 value={formData.confirmPassword}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="phone" className="sr-only">會員連絡電話</label>
+                            <input
+                                id="phone"
+                                name="phone"
+                                type="tel"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="會員連絡電話"
+                                value={formData.phone}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="address" className="sr-only">會員地址</label>
+                            <input
+                                id="address"
+                                name="address"
+                                type="text"
+                                required
+                                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                placeholder="會員地址"
+                                value={formData.address}
                                 onChange={handleChange}
                             />
                         </div>

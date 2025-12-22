@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
+// ... existing imports
+
 export async function GET(req: Request) {
     const session = await getServerSession(authOptions)
 
@@ -10,17 +12,33 @@ export async function GET(req: Request) {
         return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    const users = await prisma.user.findMany({
-        select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            createdAt: true,
-        }
-    })
+    const { searchParams } = new URL(req.url)
+    const query = searchParams.get('query')
 
-    return NextResponse.json(users)
+    try {
+        const users = await prisma.user.findMany({
+            where: query ? {
+                OR: [
+                    { name: { contains: query, mode: 'insensitive' } },
+                    { username: { contains: query, mode: 'insensitive' } },
+                ]
+            } : {},
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                name: true,
+                phone: true,
+                address: true,
+                role: true,
+                createdAt: true,
+            }
+        })
+        return NextResponse.json(users)
+    } catch (error) {
+        console.error('Error fetching users:', error)
+        return NextResponse.json({ message: "Error fetching users" }, { status: 500 })
+    }
 }
 
 export async function DELETE(req: Request) {

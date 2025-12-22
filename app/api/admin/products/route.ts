@@ -24,31 +24,47 @@ export async function POST(req: Request) {
         const imageUrls: string[] = []
 
         // Configure Cloudinary
-        cloudinary.config({
-            cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-            api_key: process.env.CLOUDINARY_API_KEY,
-            api_secret: process.env.CLOUDINARY_API_SECRET
-        });
+        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.CLOUDINARY_API_KEY;
+        const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-        for (const file of files) {
-            if (file instanceof File) {
-                const bytes = await file.arrayBuffer()
-                const buffer = Buffer.from(bytes)
+        if (files.length > 0) {
+            if (!cloudName || !apiKey || !apiSecret) {
+                console.error("Cloudinary keys are missing.")
+                return NextResponse.json({ message: '系統錯誤：未設定圖片上傳服務 (Cloudinary KEYS MISSING)' }, { status: 500 })
+            }
 
-                // Upload to Cloudinary
-                const result = await new Promise<any>((resolve, reject) => {
-                    const uploadStream = cloudinary.uploader.upload_stream(
-                        { folder: 'ecommerce-products' },
-                        (error, result) => {
-                            if (error) reject(error)
-                            else resolve(result)
+            cloudinary.config({
+                cloud_name: cloudName,
+                api_key: apiKey,
+                api_secret: apiSecret
+            });
+
+            for (const file of files) {
+                if (file instanceof File) {
+                    try {
+                        const bytes = await file.arrayBuffer()
+                        const buffer = Buffer.from(bytes)
+
+                        // Upload to Cloudinary
+                        const result = await new Promise<any>((resolve, reject) => {
+                            const uploadStream = cloudinary.uploader.upload_stream(
+                                { folder: 'ecommerce-products' },
+                                (error, result) => {
+                                    if (error) reject(error)
+                                    else resolve(result)
+                                }
+                            )
+                            uploadStream.end(buffer)
+                        })
+
+                        if (result?.secure_url) {
+                            imageUrls.push(result.secure_url)
                         }
-                    )
-                    uploadStream.end(buffer)
-                })
-
-                if (result?.secure_url) {
-                    imageUrls.push(result.secure_url)
+                    } catch (uploadError) {
+                        console.error("Image upload failed:", uploadError)
+                        return NextResponse.json({ message: '圖片上傳失敗' }, { status: 500 })
+                    }
                 }
             }
         }

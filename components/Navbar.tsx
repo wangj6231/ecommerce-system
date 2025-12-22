@@ -34,7 +34,7 @@ export default function Navbar() {
                                         管理後台
                                     </Link>
                                 )}
-                                <span className="text-gray-700 text-sm">你好, {session.user.name || session.user.email}</span>
+                                <span className="text-gray-700 text-sm">你好, {session.user.name || session.user.username}</span>
                                 <Link href="/profile" className="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                                     會員資料
                                 </Link>
