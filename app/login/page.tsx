@@ -105,6 +105,9 @@ export default function LoginPage() {
                         </Link>
                     </div>
                 </form>
+                <div className="mt-4 text-center text-xs text-gray-400">
+                    System v1.2 (Deployed)
+                </div>
             </div>
         </div>
     )
