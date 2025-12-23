@@ -31,7 +31,7 @@ export async function PUT(req: Request) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const { name, phone, address, password } = await req.json()
+    const { name, phone, address, password, currentPassword } = await req.json()
 
     const data: any = {
         name,
@@ -40,7 +40,25 @@ export async function PUT(req: Request) {
     }
 
     if (password) {
+        if (!currentPassword) {
+            return NextResponse.json({ message: '請輸入目前密碼以修改密碼' }, { status: 400 })
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: parseInt(session.user.id) }
+        })
+
+        if (!user) {
+            return NextResponse.json({ message: 'User not found' }, { status: 404 })
+        }
+
         const bcrypt = require('bcryptjs')
+        const isValid = await bcrypt.compare(currentPassword, user.password)
+
+        if (!isValid) {
+            return NextResponse.json({ message: '目前密碼錯誤' }, { status: 400 })
+        }
+
         data.password = await bcrypt.hash(password, 10)
     }
 

@@ -12,6 +12,7 @@ export default function ProfilePage() {
         name: '',
         phone: '',
         address: '',
+        currentPassword: '',
         password: '',
         confirmPassword: ''
     })
@@ -50,9 +51,15 @@ export default function ProfilePage() {
         e.preventDefault()
         setMessage('')
 
-        if (formData.password && formData.password !== formData.confirmPassword) {
-            setMessage('密碼不一致')
-            return
+        if (formData.password) {
+            if (!formData.currentPassword) {
+                setMessage('若要修改密碼，請輸入目前密碼')
+                return
+            }
+            if (formData.password !== formData.confirmPassword) {
+                setMessage('新密碼與確認密碼不一致')
+                return
+            }
         }
 
         try {
@@ -63,15 +70,17 @@ export default function ProfilePage() {
                     name: formData.name,
                     phone: formData.phone,
                     address: formData.address,
-                    password: formData.password || undefined
+                    password: formData.password || undefined,
+                    currentPassword: formData.currentPassword || undefined
                 })
             })
             if (res.ok) {
                 setMessage('資料更新成功')
-                setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }))
+                setFormData(prev => ({ ...prev, currentPassword: '', password: '', confirmPassword: '' }))
                 router.refresh()
             } else {
-                setMessage('更新失敗')
+                const data = await res.json()
+                setMessage(data.message || '更新失敗')
             }
         } catch (error) {
             setMessage('發生錯誤')
@@ -148,6 +157,15 @@ export default function ProfilePage() {
                 <div className="border-t pt-4">
                     <h3 className="tex-lg font-medium mb-2">修改密碼 (留空則不修改)</h3>
                     <div className="grid gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">目前密碼</label>
+                            <input
+                                type="password"
+                                value={formData.currentPassword}
+                                onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                            />
+                        </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700">新密碼</label>
                             <input
