@@ -13,29 +13,41 @@ export const authOptions: NextAuthOptions = {
             },
             async authorize(credentials) {
                 if (!credentials?.username || !credentials?.password) {
+                    console.log("Authorize: Missing credentials")
                     return null
                 }
 
-                const user = await prisma.user.findUnique({
-                    where: { username: credentials.username }
-                })
+                console.log(`Authorize: Attempting login for user: ${credentials.username}`)
 
-                if (!user) {
+                try {
+                    const user = await prisma.user.findUnique({
+                        where: { username: credentials.username }
+                    })
+
+                    console.log(`Authorize: User lookup result for ${credentials.username}:`, user ? "Found" : "Not Found")
+
+                    if (!user) {
+                        return null
+                    }
+
+                    const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+
+                    console.log(`Authorize: Password validation for ${credentials.username}:`, isPasswordValid ? "Valid" : "Invalid")
+
+                    if (!isPasswordValid) {
+                        return null
+                    }
+
+                    return {
+                        id: user.id.toString(),
+                        email: user.email,
+                        name: user.name,
+                        role: user.role,
+                        username: user.username,
+                    }
+                } catch (error) {
+                    console.error("Authorize: Error during login:", error)
                     return null
-                }
-
-                const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-
-                if (!isPasswordValid) {
-                    return null
-                }
-
-                return {
-                    id: user.id.toString(),
-                    email: user.email,
-                    name: user.name,
-                    role: user.role,
-                    username: user.username,
                 }
             }
         })
@@ -64,5 +76,5 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "jwt",
     },
-    secret: "supersecretkey", // Hardcoded for dev
+    secret: process.env.NEXTAUTH_SECRET || "supersecretkey",
 }
